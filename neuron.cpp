@@ -1,29 +1,26 @@
 #include <string>
 #include "neuron.h"
 
-Neuron::Neuron(const int complexity, const int threshold = 0, const bool clock = false)
+Neuron::Neuron(const std::string id, const int complexity, const float resting, const float balancer = 1, const int refractory = 0, const int threshold = 0, const bool clock = false)
 {
-    value = 0;
-    index = 0;
-    transmitter = 0;
+    this->id = id;
+    this->value = resting;
+    this->resting = resting;
+    this->balancer = balancer;
+    this->refractory = 0;
+    this->refractory_period = refractory;
     this->threshold = threshold;
     this->complexity = complexity;
     this->using_clock = clock;
-    connections = new Neuron *[complexity];
-    for (int i = 0; i < complexity; i++)
-    {
-        connections[i] = NULL;
-    }
 }
 
 Neuron::~Neuron()
 {
-    delete connections;
 }
 
-void Neuron::setTransmitter(float new_transmitter)
+void Neuron::setTransmitter(std::string id, float new_transmitter)
 {
-    this->transmitter = new_transmitter;
+    this->connections[id].first = new_transmitter;
 }
 
 void Neuron::setThreshold(float new_threshold)
@@ -31,32 +28,56 @@ void Neuron::setThreshold(float new_threshold)
     this->threshold = new_threshold;
 }
 
-void Neuron::addConnection(Neuron &neuron)
+void Neuron::addConnection(float transmitter, Neuron &neuron)
 {
-    connections[index] = &neuron;
+    this->connections[neuron.id] = std::make_pair(transmitter, &neuron);
 }
 
 void Neuron::receive(float transmission)
 {
-    value += transmission;
-    if (value > threshold && !using_clock)
+    this->value += transmission;
+    if (this->value < this->threshold || this->using_clock)
+    {
+        return;
+    }
+
+    if (this->refractory == 0)
     {
         this->fire();
+    }
+    else
+    {
+        this->refractory -= 1;
     }
 }
 
 void Neuron::clock()
 {
-    if (value > threshold)
+    if (this->refractory > 0)
+    {
+        this->refractory -= 1;
+        return;
+    }
+
+    if (this->value > this->threshold)
     {
         this->fire();
+    }
+    else if (this->value > this->resting)
+    {
+        this->value -= balancer;
+    }
+    else if (this->value < this->resting)
+    {
+        this->value += balancer;
     }
 }
 
 void Neuron::fire()
 {
-    for (int i = 0; i < complexity; i++)
+    for (std::map<std::string, std::pair<float, Neuron *>>::iterator itr = connections.begin(); itr != connections.end(); itr++)
     {
-        connections[i]->receive(transmitter);
+        itr->second.second->receive(itr->second.first);
     }
+    this->refractory = this->refractory_period;
 }
