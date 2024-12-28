@@ -4,7 +4,7 @@
 #include <map>
 
 /*
-Class representing a single neuron cell. Each cell connects to various other cells that it forwards its message to
+Class representing a single neuron cell, each connecting to various other cells that it forwards its message to
 */
 class Neuron
 {
